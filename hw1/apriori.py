@@ -3,31 +3,34 @@ from itertools import combinations
 
 transactions: list = []
 minimum_support: float = 0.
+support_map: dict = dict()
 
-def apriori(candidates: list) -> list:
+def apriori(candidates: list):
     L: list = filter_by_minimum_support(candidates)
     k: int = 2
-    U: list = L.copy()
     while L:
         C: list = generate_candidates(L, k)
         L: list = filter_by_minimum_support(C)
-        for item_set in L:
-            U.append(item_set)
         k += 1
-    return U
 
 def filter_by_minimum_support(candidates: list) -> list:
-    return list(filter(
-        lambda item_set: calculate_support(item_set) >= minimum_support,
-        candidates
-    ))
+    global support_map
+    L: list = []
+    for candidate in candidates:
+        support: float = calculate_support(candidate)
+        if support < minimum_support:
+            continue
+
+        support_map[candidate] = support
+        L.append(candidate)
+    return L
 
 def calculate_support(item_set: tuple) -> float:
     count: int = 0
     for transaction in transactions:
         if set(item_set) == set(item_set) & set(transaction):
             count += 1
-    return count / len(transactions)
+    return count / len(transactions) * 100
 
 def generate_candidates(L: list, k: int) -> list:
     return prune(L, self_join(L, k), k)
@@ -54,13 +57,20 @@ def prune(L: list, item_sets: list, k: int) -> list:
             pruned_item_sets.add(item_set)
     return pruned_item_sets
 
+def powerset(item_set: tuple) -> list:
+    powerset: list = []
+    for i in range(1, len(item_set)):
+        for item in combinations(item_set, i):
+            powerset.append(item)
+    return powerset
+
 # Dev Environment: Windows 11, Python 3.11.5
-if __name__ == "__main__":
+if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print("Execute with three arguments: minimum support(%), input file name, output file name")
+        print('Execute with three arguments: minimum support(%), input file name, output file name')
         quit()
     
-    minimum_support: float = int(sys.argv[1]) / 100
+    minimum_support: float = float(sys.argv[1])
     input_file_name: str = sys.argv[2]
     output_file_name: str = sys.argv[3]
 
@@ -77,7 +87,21 @@ if __name__ == "__main__":
 
             transactions.append(transaction)
         
-        print(apriori(list(total_item_set)))
+        apriori(list(total_item_set))
 
-    # output_file = open(file = output_file_name, mode = 'w')
+    with open(file = output_file_name, mode = 'w') as output_file:
+        for item_set in support_map.keys():
+            if len(item_set) < 2:
+                continue
 
+            support: str = format(support_map[item_set], '.2f')
+
+            for x in powerset(item_set):
+                str_of_x: str = ','.join(map(str, x))
+
+                y = tuple(set(item_set) - set(x))
+                str_of_y: str = ','.join(map(str, y))
+
+                confidence: str = format(support_map[item_set] / support_map[x] * 100, '.2f')
+
+                output_file.write(f'{{{str_of_x}}}\t{{{str_of_y}}}\t{support}\t{confidence}\n')
