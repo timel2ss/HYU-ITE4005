@@ -1,4 +1,5 @@
 import sys
+import os
 import math
 
 epsilon: int = -1
@@ -83,8 +84,9 @@ if __name__ == "__main__":
     dbscan()
     clusters.sort(key=len, reverse=True)
 
+    parsed_input_file: str = os.path.basename(sys.argv[1]).rpartition(".")[0]
     for i in range(n):
-        output_file_name: str = f'input{input_file_name[-5]}_cluster_{i}.txt'
+        output_file_name: str = f'{parsed_input_file}_cluster_{i}.txt'
         with open(file = output_file_name, mode = 'wt') as output_file:
             clusters[i].sort()
             for j in clusters[i]:
